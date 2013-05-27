@@ -10,7 +10,6 @@ import scipy.optimize
 import universemodels as U
 from luminositycalibrationmodels import UniformSpaceDensityGaussianLFemcee
 from agabutils import inverseVariance
-from extrastochastics import random_oneOverXFourth
 
 import matplotlib.pyplot as plt
 import argparse
@@ -29,6 +28,29 @@ rc('ytick.major', size='12')
 rc('ytick.minor', size='6')
 rc('lines', linewidth=2)
 rc('axes', linewidth=2)
+
+def printSamplingStats(duration, samplerUsed, numStars):
+  """
+  Print out some MCMC sampling stats in a readable form.
+
+  Parameters
+  ----------
+
+  duration - Time taken for the MCMC sampling.
+  samplerUsed - The emcee.EnsembleSampler used.
+  numStars - Number of stars in simulated survey.
+  """
+  print '                Time (s): {v:.2f}'.format(v=duration)
+  print 'Median acceptance fraction: {v:.2f}'.format(v=np.median(samplerUsed.acceptance_fraction))
+  print ('Acceptance fraction IQR: {low:.2f} -- {up:.2f}'.format(low=np.percentile(samplerUsed.acceptance_fraction,25),
+    up=np.percentile(samplerUsed.acceptance_fraction,75)))
+  correlationTimes = samplerUsed.acor
+  print 'Autocorrelation times: '
+  print '  Mean absolute magnitude: {v:.2f}'.format(v=correlationTimes[0])
+  print '  Variance absolute magnitude: {v:.2f}'.format(v=correlationTimes[1])
+  print '  Median for parallaxes: {v:.2f}'.format(v=np.median(correlationTimes[2:numStars+2]))
+  print '  Median for magnitudes: {v:.2f}'.format(v=np.median(correlationTimes[numStars+2:]))
+
 
 def runMCMCmodel(args):
   """
@@ -101,11 +123,7 @@ def runMCMCmodel(args):
     ranMeanAbsMag=np.random.rand()*(meanAbsMagHigh-meanAbsMagLow)+meanAbsMagLow
     ranVariance=gamma.rvs(varianceShape,scale=varianceScale)
     ranParallaxes=np.zeros_like(clippedObservedParallaxes)
-    for j in xrange(numberOfStarsInSurvey):
-      #if (i<nwalkers/2):
-      ranParallaxes[j]=clippedObservedParallaxes[j]+simulatedSurvey.parallaxErrors[j]*np.random.randn()
-      #else:
-      #  ranParallaxes[j]=random_oneOverXFourth(minParallax,maxParallax,1)
+    ranParallaxes=clippedObservedParallaxes+simulatedSurvey.parallaxErrors*np.random.randn(numberOfStarsInSurvey)
     ranAbsMag=np.sqrt(ranVariance)*np.random.randn(numberOfStarsInSurvey)+ranMeanAbsMag
     initialPositions[i+1]=np.concatenate((np.array([ranMeanAbsMag, ranVariance]),
       ranParallaxes.clip(minParallax, maxParallax), ranAbsMag))
@@ -118,16 +136,7 @@ def runMCMCmodel(args):
   start = now()
   pos,prob,state = sampler.run_mcmc(initialPositions, burnIter)
   print '** Finished burning in **'
-  print '                Time (s): ',now()-start
-  print 'Median acceptance fraction: ',np.median(sampler.acceptance_fraction)
-  print ('Acceptance fraction IQR: {0}'.format(np.percentile(sampler.acceptance_fraction,25)) +
-      ' -- {0}'.format(np.percentile(sampler.acceptance_fraction,75)))
-  correlationTimes = sampler.acor
-  print 'Autocorrelation times: '
-  print '  Mean absolute magnitude: ', correlationTimes[0]
-  print '  Variance absolute magnitude: ', correlationTimes[1]
-  print '  Median for parallaxes: ', np.median(correlationTimes[2:numberOfStarsInSurvey+2])
-  print '  Median for magnitudes: ', np.median(correlationTimes[numberOfStarsInSurvey+2:])
+  printSamplingStats(now()-start, sampler, numberOfStarsInSurvey)
   print
   # final chain
   sampler.reset()
@@ -135,16 +144,16 @@ def runMCMCmodel(args):
   print '** Starting sampling **'
   sampler.run_mcmc(pos, maxIter, rstate0=state, thin=thinFactor)
   print '** Finished sampling **'
-  print '                Time (s): ',now()-start
-  print 'Median acceptance fraction: ',np.median(sampler.acceptance_fraction)
-  print ('Acceptance fraction IQR: {0}'.format(np.percentile(sampler.acceptance_fraction,25)) +
-      ' -- {0}'.format(np.percentile(sampler.acceptance_fraction,75)))
+  print '                Time (s): {v:.2f}'.format(v=(now()-start))
+  print 'Median acceptance fraction: {v:.2f}'.format(v=np.median(sampler.acceptance_fraction))
+  print ('Acceptance fraction IQR: {low:.2f} -- {up:.2f}'.format(low=np.percentile(sampler.acceptance_fraction,25),
+        up=np.percentile(sampler.acceptance_fraction,75)))
   correlationTimes = sampler.acor
   print 'Autocorrelation times: '
-  print '  Mean absolute magnitude: ', correlationTimes[0]
-  print '  Variance absolute magnitude: ', correlationTimes[1]
-  print '  Median for parallaxes: ', np.median(correlationTimes[2:numberOfStarsInSurvey+2])
-  print '  Median for magnitudes: ', np.median(correlationTimes[numberOfStarsInSurvey+2:])
+  print '  Mean absolute magnitude: {v:.2f}'.format(v=correlationTimes[0])
+  print '  Variance absolute magnitude: {v:.2f}'.format(v=correlationTimes[1])
+  print '  Median for parallaxes: {v:.2f}'.format(v=np.median(correlationTimes[2:numberOfStarsInSurvey+2]))
+  print '  Median for magnitudes: {v:.2f}'.format(v=np.median(correlationTimes[numberOfStarsInSurvey+2:]))
   
   # Extract the samples of the posterior distribution
   chain = sampler.flatchain
