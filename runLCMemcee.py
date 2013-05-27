@@ -51,7 +51,6 @@ def printSamplingStats(duration, samplerUsed, numStars):
   print '  Median for parallaxes: {v:.2f}'.format(v=np.median(correlationTimes[2:numStars+2]))
   print '  Median for magnitudes: {v:.2f}'.format(v=np.median(correlationTimes[numStars+2:]))
 
-
 def runMCMCmodel(args):
   """
   Simulate the survey data and run the MCMC luminosity calibration model.
@@ -65,16 +64,9 @@ def runMCMCmodel(args):
   surveyParams=args['surveyString']
   priorParams=args['priorsString']
 
-  maxIter=int(mcmcParams[0])
-  burnIter=int(mcmcParams[1])
-  thinFactor=int(mcmcParams[2])
-  walkerFactor=int(mcmcParams[3])
-
-  minParallax=float(surveyParams[1])
-  maxParallax=float(surveyParams[2])
-  meanAbsoluteMagnitude=float(surveyParams[3])
-  varianceAbsoluteMagnitude=float(surveyParams[4])
-
+  maxIter, burnIter, thinFactor, walkerFactor = [int(par) for par in mcmcParams]
+  minParallax, maxParallax, meanAbsoluteMagnitude, varianceAbsoluteMagnitude =[float(par) for par in surveyParams[1:5]]
+  meanAbsMagLow, meanAbsMagHigh, varianceShape, varianceScale  = [float(par) for par in priorParams]
   if surveyParams[5] == 'Inf':
     magLim = np.Inf
   else:
@@ -89,18 +81,10 @@ def runMCMCmodel(args):
   # Calculate initial guesses for the true parallaxes and absolute magnitudes of the stars.
   clippedObservedParallaxes=simulatedSurvey.observedParallaxes.clip(minParallax, maxParallax)
   initialAbsMagGuesses=simulatedSurvey.observedMagnitudes+5.0*np.log10(clippedObservedParallaxes)-10.0
-  meanAbsoluteMagnitudeGuess=initialAbsMagGuesses.mean()
 
   # Initial guesses for hyper parameters (mean absolute magnitude and sigma^2)
-  #
-  # Mean absolute magnitude uniform on (meanAbsMagLow, meanAbsMagHigh)
-  meanAbsMagLow=float(priorParams[0])
-  meanAbsMagHigh=float(priorParams[1])
-  # Variance has Gamma distribution with shape and scale parameter as prior
-  varianceShape=float(priorParams[2])
-  varianceScale=float(priorParams[3])
+  meanAbsoluteMagnitudeGuess=initialAbsMagGuesses.mean()
   varianceInit=varianceScale*(varianceShape-1)
-  #varianceInit=(varianceScale-varianceShape)/(np.log(varianceScale)-np.log(varianceShape))
   
   initialParameters = np.concatenate((np.array([meanAbsoluteMagnitudeGuess, varianceInit]),
     clippedObservedParallaxes, initialAbsMagGuesses))
@@ -128,36 +112,27 @@ def runMCMCmodel(args):
     initialPositions[i+1]=np.concatenate((np.array([ranMeanAbsMag, ranVariance]),
       ranParallaxes.clip(minParallax, maxParallax), ranAbsMag))
   
-  print '** Building sampler **'
+  print '{:*^30}'.format('Building sampler')
   sampler = emcee.EnsembleSampler(nwalkers, ndim, UniformSpaceDensityGaussianLFemcee, threads=4,
       args=[posteriorDict, observations, observationalErrors])
   # burn-in
-  print '** Burn in **'
+  print '{:*^30}'.format('Burn in')
   start = now()
   pos,prob,state = sampler.run_mcmc(initialPositions, burnIter)
-  print '** Finished burning in **'
+  print '{:*^30}'.format('Finished burning')
   printSamplingStats(now()-start, sampler, numberOfStarsInSurvey)
   print
   # final chain
   sampler.reset()
+  print '{:*^30}'.format('Start sampling')
   start = now()
-  print '** Starting sampling **'
   sampler.run_mcmc(pos, maxIter, rstate0=state, thin=thinFactor)
-  print '** Finished sampling **'
-  print '                Time (s): {v:.2f}'.format(v=(now()-start))
-  print 'Median acceptance fraction: {v:.2f}'.format(v=np.median(sampler.acceptance_fraction))
-  print ('Acceptance fraction IQR: {low:.2f} -- {up:.2f}'.format(low=np.percentile(sampler.acceptance_fraction,25),
-        up=np.percentile(sampler.acceptance_fraction,75)))
-  correlationTimes = sampler.acor
-  print 'Autocorrelation times: '
-  print '  Mean absolute magnitude: {v:.2f}'.format(v=correlationTimes[0])
-  print '  Variance absolute magnitude: {v:.2f}'.format(v=correlationTimes[1])
-  print '  Median for parallaxes: {v:.2f}'.format(v=np.median(correlationTimes[2:numberOfStarsInSurvey+2]))
-  print '  Median for magnitudes: {v:.2f}'.format(v=np.median(correlationTimes[numberOfStarsInSurvey+2:]))
-  
+  print '{:*^30}'.format('Finished sampling')
+  printSamplingStats(now()-start, sampler, numberOfStarsInSurvey)
+
   # Extract the samples of the posterior distribution
   chain = sampler.flatchain
-  
+
   # Point estimates of mean Absolute Magnitude and its standard deviation.
   meanAbsoluteMagnitudeSamples = chain[:,0].flatten()
   varAbsoluteMagnitudeSamples = chain[:,1].flatten()
@@ -166,9 +141,8 @@ def runMCMCmodel(args):
   estimatedVarMag=varAbsoluteMagnitudeSamples.mean()
   errorEstimatedVarMag=varAbsoluteMagnitudeSamples.std()
   print "emcee estimates"
-  print "mu_M={:4.2f}".format(estimatedAbsMag)+" +/- {:4.2f}".format(errorEstimatedAbsMag)
-  print "sigma^2_M={:4.2f}".format(estimatedVarMag)+" +/- {:4.2f}".format(errorEstimatedVarMag)
-  
+  print "     mu_M = {:4.2f} +/- {:4.2f}".format(estimatedAbsMag, errorEstimatedAbsMag)
+  print "sigma^2_M = {:4.2f} +/- {:4.2f}".format(estimatedVarMag, errorEstimatedVarMag)
   
   # Plot results
   
@@ -180,7 +154,6 @@ def runMCMCmodel(args):
   varDensity = gaussian_kde(varAbsoluteMagnitudeSamples)
   mapValueVar = scipy.optimize.fmin(lambda x:
       -1.0*varDensity(x),np.median(varAbsoluteMagnitudeSamples),maxiter=1000,ftol=0.0001)
-  
   
   fig=plt.figure(figsize=(12,8.5))
   fig.add_subplot(2,2,1)
@@ -202,32 +175,26 @@ def runMCMCmodel(args):
   plt.xlabel("$\\mu_M$")
   plt.ylabel("$\\sigma^2_M$")
   
-  plt.figtext(0.55,0.4,"$\\widetilde{\\mu_M}="+"{:4.2f}".format(estimatedAbsMag) + 
-      "$ $\\pm$ ${:4.2f}$".format(errorEstimatedAbsMag),ha='left')
-  plt.figtext(0.75,0.4,"$\\mathrm{MAP}(\\widetilde{\\mu_M})="+"{:4.2f}".format(mapValueMu[0])+"$")
-  plt.figtext(0.55,0.35,"$\\widetilde{\\sigma^2_M}="+"{:4.2f}".format(estimatedVarMag) + 
-      "$ $\\pm$ ${:4.2f}$".format(errorEstimatedVarMag), ha='left')
-  plt.figtext(0.75,0.35,"$\\mathrm{MAP}(\\widetilde{\\sigma^2_M})="+"{:4.2f}".format(mapValueVar[0])+"$")
+  plt.figtext(0.55,0.4,"$\\widetilde{{\\mu_M}}={:4.2f}\\pm{:4.2f}$".format(estimatedAbsMag,
+    errorEstimatedAbsMag),ha='left')
+  plt.figtext(0.75,0.4,"$\\mathrm{{MAP}}(\\widetilde{{\\mu_M}})={:4.2f}$".format(mapValueMu[0]))
+  plt.figtext(0.55,0.35,"$\\widetilde{{\\sigma^2_M}}={:4.2f}\\pm{:4.2f}$".format(estimatedVarMag,
+    errorEstimatedVarMag), ha='left')
+  plt.figtext(0.75,0.35,"$\\mathrm{{MAP}}(\\widetilde{{\\sigma^2_M}})={:4.2f}$".format(mapValueVar[0]))
   
-  titelA=("$N_\\mathrm{stars}"+"={0}".format(numberOfStarsInSurvey) +
-      "$, True values: $\\mu_M={0}".format(meanAbsoluteMagnitude) +
-      "$, $\\sigma^2_M={0}".format(varianceAbsoluteMagnitude)+"$")
-  titelB=("Iterations = {0}".format(maxIter)+", Burn = {0}".format(burnIter) + 
-      ", Thin = {0}".format(thinFactor))
+  titelA=("$N_\\mathrm{{stars}}={}$, True values: $\\mu_M={}$, $\\sigma^2_M={}$".format(numberOfStarsInSurvey, meanAbsoluteMagnitude, varianceAbsoluteMagnitude))
+  titelB=("Iterations = {}, Burn = {}, Thin = {}".format(maxIter, burnIter, thinFactor))
   plt.suptitle(titelA+"\\quad\\quad "+titelB)
 
   titelC=[]
   titelC.append("MCMC sampling with emcee") 
-  titelC.append("$N_\\mathrm{walkers}" + 
-      "={0}".format(nwalkers)+"$, $N_\\mathrm{dim}"+"={0}".format(ndim)+"$")
+  titelC.append("$N_\\mathrm{{walkers}}={}$, $N_\\mathrm{{dim}}={}".format(nwalkers, ndim))
   plt.figtext(0.55,0.15,titelC[0],horizontalalignment='left')
   plt.figtext(0.60,0.10,titelC[1],horizontalalignment='left')
 
   priorInfo=[]
-  priorInfo.append("Prior on $\\mu_M$: flat $\\quad{0}".format(meanAbsMagLow) +
-      "<\\mu_M<{0}".format(meanAbsMagHigh)+"$")
-  priorInfo.append("Prior on $\\sigma^2_M$: $\\Gamma(\\sigma^2_M | k={0}".format(varianceShape) +
-      ",\\theta={0}".format(varianceScale)+")$")
+  priorInfo.append("Prior on $\\mu_M$: flat $\\quad{}<\\mu_M<{}$".format(meanAbsMagLow, meanAbsMagHigh))
+  priorInfo.append("Prior on $\\sigma^2_M$: $\\Gamma(\\sigma^2_M | k={},\\theta={})$".format(varianceShape, varianceScale))
 
   plt.figtext(0.55,0.25,priorInfo[0],horizontalalignment='left')
   plt.figtext(0.55,0.20,priorInfo[1],horizontalalignment='left')
