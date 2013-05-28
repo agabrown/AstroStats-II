@@ -9,7 +9,7 @@ import scipy.optimize
 
 import universemodels as U
 from luminositycalibrationmodels import UniformSpaceDensityGaussianLFemcee
-from agabutils import inverseVariance
+from agabutils import inverseVariance, kdeAndMap
 
 import matplotlib.pyplot as plt
 import argparse
@@ -146,14 +146,10 @@ def runMCMCmodel(args):
   
   # Plot results
   
-  # MAP estimates
-  muDensity = gaussian_kde(meanAbsoluteMagnitudeSamples)
-  mapValueMu = scipy.optimize.fmin(lambda x:
-      -1.0*muDensity(x),np.median(meanAbsoluteMagnitudeSamples),maxiter=1000,ftol=0.0001)
-  
-  varDensity = gaussian_kde(varAbsoluteMagnitudeSamples)
-  mapValueVar = scipy.optimize.fmin(lambda x:
-      -1.0*varDensity(x),np.median(varAbsoluteMagnitudeSamples),maxiter=1000,ftol=0.0001)
+  # Kernel density estimate of posterior distributions of mu_M and sigma^2_M, also obtain maximum a
+  # posteriori estimate for these quantitities.
+  muDensity, mapValueMu = kdeAndMap(meanAbsoluteMagnitudeSamples)
+  varDensity, mapValueVar = kdeAndMap(varAbsoluteMagnitudeSamples)
   
   fig=plt.figure(figsize=(12,8.5))
   fig.add_subplot(2,2,1)

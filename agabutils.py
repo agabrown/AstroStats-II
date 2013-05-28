@@ -3,6 +3,8 @@ Utility methods for use with the Astrostats-II school exercises.
 """
 
 import numpy as np
+from scipy.stats import gaussian_kde
+from scipy.optimize import fmin
 
 def inverseVariance(sigma):
   """
@@ -52,3 +54,29 @@ def calculateHistogram(samples, nbins, discrete=False):
     histo, binEdges = np.histogram(samples,bins=nbins,density=True)
     binCentres = binEdges[0:len(binEdges)-1]+np.diff(binEdges)/2.0
   return histo, binCentres
+
+def kdeAndMap(y):
+  """
+  Provide a kernel density estimate of the distribution p(y) of variable y and also calculate the
+  location of the maximum of p(y).
+
+  Parameters
+  ----------
+
+  y - Array of values from which the KDE is to be made
+
+  Returns
+  -------
+
+  Function representing the kernel density estimate (see documentation of scipy.stats.gaussian_kde) and
+  the location of the maximum.
+
+  Example
+  -------
+
+  yDensity, maximum = kernelDensityEstimate(y)
+  """
+  density = gaussian_kde(y)
+  maximum = fmin(lambda x: -1.0*density(x),np.median(y),maxiter=1000,ftol=0.0001)
+
+  return density, maximum
