@@ -55,7 +55,7 @@ def calculateHistogram(samples, nbins, discrete=False):
     binCentres = binEdges[0:len(binEdges)-1]+np.diff(binEdges)/2.0
   return histo, binCentres
 
-def kdeAndMap(y):
+def kdeAndMap(y, bwmethod='scott'):
   """
   Provide a kernel density estimate of the distribution p(y) of variable y and also calculate the
   location of the maximum of p(y).
@@ -64,6 +64,7 @@ def kdeAndMap(y):
   ----------
 
   y - Array of values from which the KDE is to be made
+  bwmethod - optional argument, passed to the bw_method argument of gaussian_kde()
 
   Returns
   -------
@@ -76,7 +77,7 @@ def kdeAndMap(y):
 
   yDensity, maximum = kernelDensityEstimate(y)
   """
-  density = gaussian_kde(y)
+  density = gaussian_kde(y, bw_method=bwmethod)
   maximum = fmin(lambda x: -1.0*density(x),np.median(y),maxiter=1000,ftol=0.0001)
 
   return density, maximum

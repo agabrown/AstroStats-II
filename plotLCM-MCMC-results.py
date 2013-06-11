@@ -13,7 +13,7 @@ from matplotlib import cm
 from matplotlib.patches import Circle
 import argparse
 from tables import openFile
-from agabutils import calculateHistogram
+from agabutils import kdeAndMap
 from re import match
 
 # Configure matplotlib
@@ -81,14 +81,10 @@ def plotLCMResults(args):
 
   # MAP estimates
   muSamples = M.trace('meanAbsoluteMagnitude', chain=-1)[:]
-  muDensity = gaussian_kde(muSamples)
-  mapValueMu = scipy.optimize.fmin(lambda x:
-      -1.0*muDensity(x),np.median(muSamples),maxiter=1000,ftol=0.0001)
+  muDensity, mapValueMu = kdeAndMap(muSamples)
 
   varSamples = 1.0/M.trace('tauAbsoluteMagnitude', chain=-1)[:]
-  varDensity = gaussian_kde(varSamples)
-  mapValueVar = scipy.optimize.fmin(lambda x:
-      -1.0*varDensity(x),np.median(varSamples),maxiter=1000,ftol=0.0001)
+  varDensity, mapValueVar = kdeAndMap(varSamples)
 
   # The wrong estimators:
   indices=(observedParallaxes > 0.0)
@@ -116,33 +112,27 @@ def plotLCMResults(args):
   ax = fig.add_subplot(2,2,3)
   plt.hexbin(muSamples, varSamples,C=None,bins='log',cmap=cm.gray_r)
   ax.plot(meanAbsoluteMagnitude,varianceAbsoluteMagnitude,'or',mec='r', markersize=8, scalex=False, scaley=False)
-  #ax.add_patch(Circle((meanAbsoluteMagnitude,varianceAbsoluteMagnitude),radius=0.05,fc='r',ec=None))
   plt.xlabel("$\\mu_M$")
   plt.ylabel("$\\sigma^2_M$")
 
-  plt.figtext(0.55,0.4,"$\\widetilde{\\mu_M}="+"{:4.2f}".format(estimatedAbsMag) + 
-      "$ $\\pm$ ${:4.2f}$".format(errorEstimatedAbsMag),ha='left')
-  plt.figtext(0.75,0.4,"$\\mathrm{MAP}(\\widetilde{\\mu_M})="+"{:4.2f}".format(mapValueMu[0])+"$")
-  plt.figtext(0.55,0.35,"$\\widetilde{\\sigma^2_M}="+"{:4.2f}".format(estimatedVarMag) + 
-      "$ $\\pm$ ${:4.2f}$".format(errorEstimatedVarMag), ha='left')
-  plt.figtext(0.75,0.35,"$\\mathrm{MAP}(\\widetilde{\\sigma^2_M})="+"{:4.2f}".format(mapValueVar[0])+"$")
-
-  titelA=("$N_\\mathrm{stars}"+"={0}".format(numberOfStarsInSurvey) +
-      "$, True values: $\\mu_M={0}".format(meanAbsoluteMagnitude) +
-      "$, $\\sigma^2_M={0}".format(varianceAbsoluteMagnitude)+"$")
-  titelB=("Iterations = {0}".format(maxIter)+", Burn = {0}".format(burnIter) + 
-      ", Thin = {0}".format(thinFactor))
+  plt.figtext(0.55,0.4,"$\\widetilde{{\\mu_M}}={:4.2f}\\pm{:4.2f}$".format(estimatedAbsMag,
+    errorEstimatedAbsMag),ha='left')
+  plt.figtext(0.75,0.4,"$\\mathrm{{MAP}}(\\widetilde{{\\mu_M}})={:4.2f}$".format(mapValueMu[0]))
+  plt.figtext(0.55,0.35,"$\\widetilde{{\\sigma^2_M}}={:4.2f}\\pm{:4.2f}$".format(estimatedVarMag,
+    errorEstimatedVarMag), ha='left')
+  plt.figtext(0.75,0.35,"$\\mathrm{{MAP}}(\\widetilde{{\\sigma^2_M}})={:4.2f}$".format(mapValueVar[0]))
+  
+  titelA=("$N_\\mathrm{{stars}}={}$, True values: $\\mu_M={}$, $\\sigma^2_M={}$".format(numberOfStarsInSurvey, meanAbsoluteMagnitude, varianceAbsoluteMagnitude))
+  titelB=("Iterations = {}, Burn = {}, Thin = {}".format(maxIter, burnIter, thinFactor))
   plt.suptitle(titelA+"\\quad\\quad "+titelB)
 
   priorInfo=[]
-  priorInfo.append("Prior on $\\mu_M$: flat $\\quad{0}".format(minMeanAbsoluteMagnitude) +
-      "<\\mu_M<{0}".format(maxMeanAbsoluteMagnitude)+"$")
+  priorInfo.append("Prior on $\\mu_M$: flat $\\quad{}<\\mu_M<{}$".format(minMeanAbsoluteMagnitude,
+    maxMeanAbsoluteMagnitude))
   if (match("OneOverX",priorTau)):
-    priorInfo.append("Prior on $\\tau_M$: $1/\\tau_M\\quad{0}".format(tauLow) +
-        "<\\tau_M<{0}".format(tauHigh)+"$")
+    priorInfo.append("Prior on $\\tau_M$: $1/\\tau_M\\quad{}<\\tau_M<{}$".format(tauLow, tauHigh))
   else:
-    priorInfo.append("Prior on $\\tau_M$: $\\Gamma_\\mathrm{inverse}" +
-        "(\\tau_M | \\alpha={0}".format(shapeTau) + ",\\beta={0}".format(scaleTau)+")$")
+    priorInfo.append("Prior on $\\tau_M$: $\\Gamma_\\mathrm{{inverse}}(\\tau_M | \\alpha={}, \\beta={})$".format(shapeTau,scaleTau))
 
   plt.figtext(0.55,0.25,priorInfo[0],horizontalalignment='left')
   plt.figtext(0.55,0.20,priorInfo[1],horizontalalignment='left')

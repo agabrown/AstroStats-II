@@ -226,7 +226,7 @@ def UniformSpaceDensityGaussianLFBookemcee(posWalker, posteriorDict, observation
   meanAbsMag=posWalker[0]
   if (meanAbsMag<posteriorDict['muLow'] or meanAbsMag>posteriorDict['muHigh']):
     return -np.inf
-  lnPosterior=lnPosterior-np.log(posteriorDict['muHigh']-posteriorDict['muLow'])
+  #lnPosterior=lnPosterior-np.log(posteriorDict['muHigh']-posteriorDict['muLow'])
 
   variance=posWalker[1]
   if (variance<posteriorDict['varLow'] or variance>posteriorDict['varHigh']):
@@ -290,7 +290,7 @@ def UniformSpaceDensityGaussianLFemcee(posWalker, posteriorDict, observations, o
   meanAbsMag=posWalker[0]
   if (meanAbsMag<posteriorDict['muLow'] or meanAbsMag>posteriorDict['muHigh']):
     return -np.inf
-  lnPosterior=lnPosterior-np.log(posteriorDict['muHigh']-posteriorDict['muLow'])
+  #lnPosterior=lnPosterior-np.log(posteriorDict['muHigh']-posteriorDict['muLow'])
 
   variance=posWalker[1]
   if (variance<0.0):

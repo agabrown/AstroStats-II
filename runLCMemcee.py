@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import argparse
 from matplotlib import rc, cm
 from time import time as now
-from scipy.stats import gamma, gaussian_kde
+from scipy.stats import gamma
 
 np.seterr(invalid='raise')
 
@@ -166,11 +166,12 @@ def runMCMCmodel(args):
   plt.xlabel("$\\sigma^2_M$")
   plt.ylabel("$P(\\sigma^2_M)$")
   
-  fig.add_subplot(2,2,3)
+  ax=fig.add_subplot(2,2,3)
   plt.hexbin(meanAbsoluteMagnitudeSamples,varAbsoluteMagnitudeSamples, C=None, bins='log', cmap=cm.gray_r)
+  ax.plot(meanAbsoluteMagnitude,varianceAbsoluteMagnitude,'or',mec='r', markersize=8, scalex=False, scaley=False)
   plt.xlabel("$\\mu_M$")
   plt.ylabel("$\\sigma^2_M$")
-  
+
   plt.figtext(0.55,0.4,"$\\widetilde{{\\mu_M}}={:4.2f}\\pm{:4.2f}$".format(estimatedAbsMag,
     errorEstimatedAbsMag),ha='left')
   plt.figtext(0.75,0.4,"$\\mathrm{{MAP}}(\\widetilde{{\\mu_M}})={:4.2f}$".format(mapValueMu[0]))

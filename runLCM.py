@@ -58,9 +58,7 @@ def runMCMCmodel(args):
   surveyParams=args['surveyString']
   priorParams=args['priorsString']
 
-  maxIter=int(mcmcParams[0])
-  burnIter=int(mcmcParams[1])
-  thinFactor=int(mcmcParams[2])
+  maxIter, burnIter, thinFactor = [int(par) for par in mcmcParams]
 
   if surveyParams[5] == 'Inf':
     magLim = np.Inf

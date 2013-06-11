@@ -10,14 +10,14 @@ import scipy.optimize
 
 import universemodels as U
 from luminositycalibrationmodels import UniformSpaceDensityGaussianLFBookemcee
-from agabutils import inverseVariance, calculateHistogram
+from agabutils import inverseVariance, kdeAndMap
 from extrastochastics import random_oneOverXFourth, random_oneOverX
 
 import matplotlib.pyplot as plt
 import argparse
 from matplotlib import rc, cm
 from time import time as now
-from scipy.stats import gamma, gaussian_kde
+from scipy.stats import gamma
 
 np.seterr(invalid='raise')
 
@@ -163,15 +163,10 @@ def runMCMCmodel(args):
   
   # Plot results
   
-  # MAP estimates
-  muDensity = gaussian_kde(meanAbsoluteMagnitudeSamples)
-  mapValueMu = scipy.optimize.fmin(lambda x:
-      -1.0*muDensity(x),np.median(meanAbsoluteMagnitudeSamples),maxiter=1000,ftol=0.0001)
-  
-  varDensity = gaussian_kde(varAbsoluteMagnitudeSamples)
-  mapValueVar = scipy.optimize.fmin(lambda x:
-      -1.0*varDensity(x),np.median(varAbsoluteMagnitudeSamples),maxiter=1000,ftol=0.0001)
-  
+  # Kernel density estimate of posterior distributions of mu_M and sigma^2_M, also obtain maximum a
+  # posteriori estimate for these quantitities.
+  muDensity, mapValueMu = kdeAndMap(meanAbsoluteMagnitudeSamples)
+  varDensity, mapValueVar = kdeAndMap(varAbsoluteMagnitudeSamples)
   
   fig=plt.figure(figsize=(12,8.5))
   fig.add_subplot(2,2,1)
@@ -188,53 +183,43 @@ def runMCMCmodel(args):
   plt.xlabel("$\\sigma^2_M$")
   plt.ylabel("$P(\\sigma^2_M)$")
   
-  fig.add_subplot(2,2,3)
+  ax=fig.add_subplot(2,2,3)
   plt.hexbin(meanAbsoluteMagnitudeSamples,varAbsoluteMagnitudeSamples, C=None, bins='log', cmap=cm.gray_r)
+  ax.plot(meanAbsoluteMagnitude,varianceAbsoluteMagnitude,'or',mec='r', markersize=8, scalex=False, scaley=False)
   plt.xlabel("$\\mu_M$")
   plt.ylabel("$\\sigma^2_M$")
 
-  plt.figtext(0.55,0.4,"$\\widetilde{\\mu_M}="+"{:4.2f}".format(estimatedAbsMag) + 
-      "$ $\\pm$ ${:4.2f}$".format(errorEstimatedAbsMag),ha='left')
-  plt.figtext(0.75,0.4,"$\\mathrm{MAP}(\\widetilde{\\mu_M})="+"{:4.2f}".format(mapValueMu[0])+"$")
-  plt.figtext(0.55,0.35,"$\\widetilde{\\sigma^2_M}="+"{:4.2f}".format(estimatedVarMag) + 
-      "$ $\\pm$ ${:4.2f}$".format(errorEstimatedVarMag), ha='left')
-  plt.figtext(0.75,0.35,"$\\mathrm{MAP}(\\widetilde{\\sigma^2_M})="+"{:4.2f}".format(mapValueVar[0])+"$")
-
-  titelA=("$N_\\mathrm{stars}"+"={0}".format(numberOfStarsInSurvey) +
-      "$, True values: $\\mu_M={0}".format(meanAbsoluteMagnitude) +
-      "$, $\\sigma^2_M={0}".format(varianceAbsoluteMagnitude)+"$")
-  titelB=("Iterations = {0}".format(maxIter)+", Burn = {0}".format(burnIter) + 
-      ", Thin = {0}".format(thinFactor))
-  plt.suptitle(titelA+"\\quad\\quad "+titelB)
-  titelA=("$N_\\mathrm{stars}"+"={0}".format(numberOfStarsInSurvey) +
-      "$, True values: $\\mu_M={0}".format(meanAbsoluteMagnitude) +
-      "$, $\\sigma^2_M={0}".format(varianceAbsoluteMagnitude)+"$")
-  titelB=("Iterations = {0}".format(maxIter)+", Burn = {0}".format(burnIter) + 
-      ", Thin = {0}".format(thinFactor))
+  plt.figtext(0.55,0.4,"$\\widetilde{{\\mu_M}}={:4.2f}\\pm{:4.2f}$".format(estimatedAbsMag,
+    errorEstimatedAbsMag),ha='left')
+  plt.figtext(0.75,0.4,"$\\mathrm{{MAP}}(\\widetilde{{\\mu_M}})={:4.2f}$".format(mapValueMu[0]))
+  plt.figtext(0.55,0.35,"$\\widetilde{{\\sigma^2_M}}={:4.2f}\\pm{:4.2f}$".format(estimatedVarMag,
+    errorEstimatedVarMag), ha='left')
+  plt.figtext(0.75,0.35,"$\\mathrm{{MAP}}(\\widetilde{{\\sigma^2_M}})={:4.2f}$".format(mapValueVar[0]))
+  
+  titelA=("$N_\\mathrm{{stars}}={}$, True values: $\\mu_M={}$, $\\sigma^2_M={}$".format(numberOfStarsInSurvey, meanAbsoluteMagnitude, varianceAbsoluteMagnitude))
+  titelB=("Iterations = {}, Burn = {}, Thin = {}".format(maxIter, burnIter, thinFactor))
   plt.suptitle(titelA+"\\quad\\quad "+titelB)
 
   titelC=[]
   titelC.append("MCMC sampling with emcee") 
-  titelC.append("$N_\\mathrm{walkers}" + 
-      "={0}".format(nwalkers)+"$, $N_\\mathrm{dim}"+"={0}".format(ndim)+"$")
+  titelC.append("$N_\\mathrm{{walkers}}={}$, $N_\\mathrm{{dim}}={}".format(nwalkers, ndim))
   plt.figtext(0.55,0.15,titelC[0],horizontalalignment='left')
   plt.figtext(0.60,0.10,titelC[1],horizontalalignment='left')
 
   priorInfo=[]
-  priorInfo.append("Prior on $\\mu_M$: flat $\\quad{0}".format(meanAbsMagLow) +
-      "<\\mu_M<{0}".format(meanAbsMagHigh)+"$")
-  priorInfo.append("Prior on $\\sigma^2_M$: $1/\\sigma^2_M\\quad{0}".format(varianceLow) +
-      "<\\sigma^2_M<{0}".format(varianceHigh)+"$")
+  priorInfo.append("Prior on $\\mu_M$: flat $\\quad{}<\\mu_M<{}$".format(meanAbsMagLow, meanAbsMagHigh))
+  priorInfo.append("Prior on $\\sigma^2_M$: $1/\\sigma^2_M\\quad{}<\\sigma^2_M<{}$".format(varianceLow,varianceHigh))
   
   plt.figtext(0.55,0.25,priorInfo[0],horizontalalignment='left')
   plt.figtext(0.55,0.20,priorInfo[1],horizontalalignment='left')
-  
+ 
+  basename='luminosityCalibrationResultsEmcee'
   if (args['pdfOutput']):
-    plt.savefig('luminosityCalibrationResultsEmcee.pdf')
+    plt.savefig(basename+'.pdf')
   elif (args['pngOutput']):
-    plt.savefig('luminosityCalibrationResultsEmcee.png')
+    plt.savefig(basename+'.png')
   elif (args['epsOutput']):
-    plt.savefig('luminosityCalibrationResultsEmcee.eps')
+    plt.savefig(basename+'.eps')
   else:
     plt.show()
 

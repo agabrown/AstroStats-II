@@ -43,7 +43,7 @@ def plotBiases(args):
   fig=plt.figure(figsize=(12,5))
   fig.add_subplot(1,2,1)
   plt.hexbin(np.log10(relParErr),deltaAbsMag,C=None, bins='log', cmap=cm.gray_r)
-  plt.xlabel("$\\sigma_\\varpi/\\varpi_\\mathrm{o}$")
+  plt.xlabel("$\\log[\\sigma_\\varpi/\\varpi_\\mathrm{o}]$")
   plt.ylabel("$\\widetilde{M}-M_\\mathrm{true}$")
   plt.xlim(-3,2)
   plt.ylim(-10,6)
