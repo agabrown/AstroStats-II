@@ -10,6 +10,7 @@ import scipy.optimize
 import matplotlib.pyplot as plt
 from matplotlib import rc
 from matplotlib import cm
+from matplotlib.patches import Circle
 import argparse
 from tables import openFile
 from agabutils import calculateHistogram
@@ -114,6 +115,8 @@ def plotLCMResults(args):
 
   ax = fig.add_subplot(2,2,3)
   plt.hexbin(muSamples, varSamples,C=None,bins='log',cmap=cm.gray_r)
+  ax.plot(meanAbsoluteMagnitude,varianceAbsoluteMagnitude,'or',mec='r', markersize=8, scalex=False, scaley=False)
+  #ax.add_patch(Circle((meanAbsoluteMagnitude,varianceAbsoluteMagnitude),radius=0.05,fc='r',ec=None))
   plt.xlabel("$\\mu_M$")
   plt.ylabel("$\\sigma^2_M$")
 
