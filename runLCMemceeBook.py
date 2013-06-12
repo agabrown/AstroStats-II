@@ -202,7 +202,7 @@ def runMCMCmodel(args):
 
   titelC=[]
   titelC.append("MCMC sampling with emcee") 
-  titelC.append("$N_\\mathrm{{walkers}}={}$, $N_\\mathrm{{dim}}={}".format(nwalkers, ndim))
+  titelC.append("$N_\\mathrm{{walkers}}={}$, $N_\\mathrm{{dim}}={}$".format(nwalkers, ndim))
   plt.figtext(0.55,0.15,titelC[0],horizontalalignment='left')
   plt.figtext(0.60,0.10,titelC[1],horizontalalignment='left')
 
