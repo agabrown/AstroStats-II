@@ -81,3 +81,11 @@ def kdeAndMap(y, bwmethod='scott'):
   maximum = fmin(lambda x: -1.0*density(x),np.median(y),maxiter=1000,ftol=0.0001)
 
   return density, maximum
+
+def randOneOverXFourth(lower, upper, size):
+  lowerMinThird=np.power(lower,-3.0)
+  upperMinThird=np.power(upper,-3.0)
+  return np.power(lowerMinThird-np.random.random_sample(size)*(lowerMinThird-upperMinThird),-1.0/3.0)
+
+def randOneOverX(lower, upper, size):
+  return np.exp(np.log(lower)+np.random.random_sample(size)*(np.log(upper)-np.log(lower)))

@@ -10,8 +10,7 @@ import scipy.optimize
 
 import universemodels as U
 from luminositycalibrationmodels import UniformSpaceDensityGaussianLFBookemcee
-from agabutils import inverseVariance, kdeAndMap
-from extrastochastics import random_oneOverXFourth, random_oneOverX
+from agabutils import inverseVariance, kdeAndMap, randOneOverXFourth, randOneOverX
 
 import matplotlib.pyplot as plt
 import argparse
@@ -99,13 +98,13 @@ def runMCMCmodel(args):
   initialPositions[0]=initialParameters
   for i in xrange(nwalkers-1):
     ranMeanAbsMag=np.random.rand()*(meanAbsMagHigh-meanAbsMagLow)+meanAbsMagLow
-    ranVariance=random_oneOverX(varianceLow,varianceHigh,1)
+    ranVariance=randOneOverX(varianceLow,varianceHigh,1)
     ranParallaxes=np.zeros_like(clippedObservedParallaxes)
     for j in xrange(numberOfStarsInSurvey):
       #if (i<nwalkers/2):
       ranParallaxes[j]=clippedObservedParallaxes[j]+simulatedSurvey.parallaxErrors[j]*np.random.randn()
       #else:
-      #  ranParallaxes[j]=random_oneOverXFourth(minParallax,maxParallax,1)
+      #  ranParallaxes[j]=randOneOverXFourth(minParallax,maxParallax,1)
     ranAbsMag=np.sqrt(ranVariance)*np.random.randn(numberOfStarsInSurvey)+ranMeanAbsMag
     initialPositions[i+1]=np.concatenate((np.array([ranMeanAbsMag, ranVariance]),
       ranParallaxes.clip(minParallax, maxParallax), ranAbsMag))

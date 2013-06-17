@@ -6,7 +6,7 @@ Here the Inverse-Gamma-prior on the variance hyper-parameter tau=1/sigma^2_M is 
 
 import numpy as np
 from pymc import MCMC, AdaptiveMetropolis, Metropolis
-import luminositycalibrationmodels as L
+import luminositycalibrationmodelsPyMC as L
 import universemodels as U
 from tables import Int32Col, Float64Col, StringCol, IsDescription, openFile
 import argparse
