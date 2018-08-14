@@ -3,6 +3,8 @@ MCMC luminosity calibration exercise for GREAT AstroStats-II school June 2013
 
 Python code for the exercise on Bayesian luminosity calibration as part of the lectures by B. Holl.
 
+**THIS REPOSITORY IS OBSOLETE AND MAINTAINED ONLY FOR REFERENCE. PLEASE REFER TO THE** `TUTORIALS <https://github.com/agabrown/astrometry-inference-tutorials>`_ **ACCOMPANYING THE PAPER BY** `LURI ET AL (2018) <https://doi.org/10.1051/0004-6361/201832964>`_ **INSTEAD.**
+
 Required python packages
 ------------------------
 
